@@ -85,9 +85,9 @@ func (r *mockTaskRepository) Create(ctx context.Context, entity *domain.Task) (*
 	return nil, args.Error(1)
 }
 
-func (r *mockTaskRepository) UpdateByID(ctx context.Context, id uint, update *domain.Task) (*domain.Task, error) {
-	args := r.Called(id, update)
-	if u := args.Get(1); u != nil {
+func (r *mockTaskRepository) Update(ctx context.Context, filter, update *domain.Task) (*domain.Task, error) {
+	args := r.Called(filter, update)
+	if u := args.Get(0); u != nil {
 		return u.(*domain.Task), nil
 	}
 	return nil, args.Error(1)

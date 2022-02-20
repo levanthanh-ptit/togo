@@ -9,27 +9,6 @@ import (
 	"togo/internal/repository"
 )
 
-func TestNewUserService(t *testing.T) {
-	type args struct {
-		passwordHashProvider provider.PasswordHashProvider
-		userRepo             repository.UserRepository
-	}
-	tests := []struct {
-		name string
-		args args
-		want domain.UserService
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewUserService(tt.args.passwordHashProvider, tt.args.userRepo); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewUserService() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_userService_CreateUser(t *testing.T) {
 	type fields struct {
 		passwordHashProvider provider.PasswordHashProvider

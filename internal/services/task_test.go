@@ -127,7 +127,7 @@ func Test_taskService_Create(t *testing.T) {
 	}
 }
 
-func Test_taskService_UpdateByID(t *testing.T) {
+func Test_taskService_Update(t *testing.T) {
 	type fields struct {
 		userRepo      repository.UserRepository
 		taskRepo      repository.TaskRepository
@@ -135,9 +135,31 @@ func Test_taskService_UpdateByID(t *testing.T) {
 	}
 	type args struct {
 		ctx    context.Context
-		id     uint
+		filter *domain.Task
 		update *domain.Task
 	}
+	// Mocks
+	notFoundFilter := &domain.Task{
+		ID:     1,
+		UserID: 1,
+	}
+	taskFilter := &domain.Task{
+		ID:     2,
+		UserID: 1,
+	}
+	taskUpdate := &domain.Task{
+		Content: "Text updated",
+	}
+	task := &domain.Task{
+		ID:      2,
+		UserID:  1,
+		Content: "Text updated",
+	}
+	taskRepo := new(mockTaskRepository)
+	taskRepo.On("Update", notFoundFilter, taskUpdate).Return(nil, domain.ErrTaskNotFound)
+	taskRepo.On("Update", taskFilter, taskUpdate).Return(task, nil)
+	brokenTaskRepo := new(mockTaskRepository)
+	brokenTaskRepo.On("Update", mock.Anything, mock.Anything).Return(nil, domain.ErrTaskNotFound)
 	tests := []struct {
 		name    string
 		fields  fields
@@ -145,7 +167,36 @@ func Test_taskService_UpdateByID(t *testing.T) {
 		want    *domain.Task
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "Task not found",
+			fields: fields{taskRepo: taskRepo},
+			args: args{
+				context.Background(),
+				notFoundFilter,
+				taskUpdate,
+			},
+			wantErr: true,
+		},
+		{
+			name:   "Task saving failed",
+			fields: fields{taskRepo: brokenTaskRepo},
+			args: args{
+				context.Background(),
+				taskFilter,
+				taskUpdate,
+			},
+			wantErr: true,
+		},
+		{
+			name:   "Task update susscessfully",
+			fields: fields{taskRepo: taskRepo},
+			args: args{
+				context.Background(),
+				taskFilter,
+				taskUpdate,
+			},
+			want: task,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,13 +205,13 @@ func Test_taskService_UpdateByID(t *testing.T) {
 				taskRepo:      tt.fields.taskRepo,
 				taskLimitRepo: tt.fields.taskLimitRepo,
 			}
-			got, err := s.UpdateByID(tt.args.ctx, tt.args.id, tt.args.update)
+			got, err := s.Update(tt.args.ctx, tt.args.filter, tt.args.update)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("taskService.UpdateByID() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("taskService.Update() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("taskService.UpdateByID() = %v, want %v", got, tt.want)
+				t.Errorf("taskService.Update() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -176,6 +227,18 @@ func Test_taskService_FindByUserID(t *testing.T) {
 		ctx    context.Context
 		userID uint
 	}
+	// Mocks
+	notFoundTaskUserID := uint(1)
+	userID := uint(2)
+	emptyTasks := make([]*domain.Task, 0)
+	tasks := []*domain.Task{{
+		ID:      1,
+		UserID:  userID,
+		Content: "Task 1",
+	}}
+	taskRepo := new(mockTaskRepository)
+	taskRepo.On("Find", &domain.Task{UserID: notFoundTaskUserID}).Return(emptyTasks, nil)
+	taskRepo.On("Find", &domain.Task{UserID: userID}).Return(tasks, nil)
 	tests := []struct {
 		name    string
 		fields  fields
@@ -183,7 +246,24 @@ func Test_taskService_FindByUserID(t *testing.T) {
 		want    []*domain.Task
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "Not found any task",
+			fields: fields{taskRepo: taskRepo},
+			args: args{
+				context.Background(),
+				notFoundTaskUserID,
+			},
+			want: emptyTasks,
+		},
+		{
+			name:   "Find tasks successfully",
+			fields: fields{taskRepo: taskRepo},
+			args: args{
+				context.Background(),
+				userID,
+			},
+			want: tasks,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
